@@ -3,6 +3,7 @@ import { DEFAULT_CMS_DATA } from '../data/defaultCms'
 const BROADCAST_CHANNEL = 'uandwe_cms_sync_channel'
 
 const API_BASE = '/api/cms'
+const LOCAL_API = 'http://localhost:5001/api/cms'
 const DIRECT_API = 'https://uandwelabs-backend.vercel.app/api/cms'
 
 const CMS_CACHE_KEY = 'uandwe_cms_cache'
@@ -68,7 +69,11 @@ export async function fetchCms() {
   const localCached = getCachedCms()
   const baseSeed = localCached ? localCached : DEFAULT_CMS_DATA
 
-  const endpoints = [API_BASE, DIRECT_API]
+  const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+  const endpoints = [API_BASE]
+  if (isLocal) endpoints.push(LOCAL_API)
+  if (!endpoints.includes(DIRECT_API)) endpoints.push(DIRECT_API)
+
   for (const ep of endpoints) {
     try {
       const res = await fetch(ep, {
@@ -78,9 +83,8 @@ export async function fetchCms() {
       const json = await res.json()
       if (json.success && json.data) {
         const serverData = deepMerge(DEFAULT_CMS_DATA, json.data)
-        const merged = localCached ? deepMerge(serverData, localCached) : serverData
-        cacheCmsLocally(merged)
-        return { success: true, data: merged, source: json.source }
+        cacheCmsLocally(serverData)
+        return { success: true, data: serverData, source: json.source }
       }
     } catch { }
   }
@@ -101,8 +105,11 @@ export async function saveCms(data, passcode = 'uandwe2026') {
     } catch { }
   }
 
-  // 3. Persist directly to backend database (try proxy and direct)
-  const endpoints = [API_BASE, DIRECT_API]
+  // 3. Persist directly to backend database (try proxy, local server, and production direct)
+  const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+  const endpoints = [API_BASE]
+  if (isLocal) endpoints.push(LOCAL_API)
+  if (!endpoints.includes(DIRECT_API)) endpoints.push(DIRECT_API)
   let lastError = null
 
   for (const ep of endpoints) {
