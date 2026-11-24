@@ -1,29 +1,23 @@
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
-import tailwindcss from '@tailwindcss/vite'
-import { fileURLToPath, URL } from 'node:url'
-
-export default defineConfig({
-  plugins: [
-    tailwindcss(),
-    react(),
+{
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "Cross-Origin-Opener-Policy",
+          "value": "same-origin-allow-popups"
+        }
+      ]
+    }
   ],
-  resolve: {
-    alias: {
-      '@': fileURLToPath(new URL('./src', import.meta.url)),
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://uandwelabs-backend.vercel.app/api/:path*"
     },
-  },
-  server: {
-    port: 5175,
-    strictPort: true,
-    proxy: {
-      '/api': {
-        target: 'http://localhost:5001',
-        changeOrigin: true,
-      },
-    },
-  },
-  build: {
-    chunkSizeWarningLimit: 600,
-  },
-})
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}
