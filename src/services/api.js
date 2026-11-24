@@ -5,12 +5,29 @@ const BROADCAST_CHANNEL = 'uandwe_cms_sync_channel'
 const API_BASE = '/api/cms'
 const DIRECT_API = 'https://uandwelabs-backend.vercel.app/api/cms'
 
-// Clean up any legacy localStorage cache
+const CMS_CACHE_KEY = 'uandwe_cms_cache'
 
-if (typeof window !== 'undefined') {
-  try {
-    localStorage.removeItem('uandwe_cms_live_cache')
-  } catch {}
+export function getCachedCms() {
+  if (typeof window !== 'undefined') {
+    try {
+      const cached = localStorage.getItem(CMS_CACHE_KEY)
+      if (cached) {
+        const parsed = JSON.parse(cached)
+        if (parsed && typeof parsed === 'object') {
+          return deepMerge(DEFAULT_CMS_DATA, parsed)
+        }
+      }
+    } catch {}
+  }
+  return null
+}
+
+export function cacheCmsLocally(data) {
+  if (typeof window !== 'undefined' && data) {
+    try {
+      localStorage.setItem(CMS_CACHE_KEY, JSON.stringify(data))
+    } catch {}
+  }
 }
 
 export function deepMerge(target, source) {
@@ -48,6 +65,9 @@ export function deepMerge(target, source) {
 }
 
 export async function fetchCms() {
+  const localCached = getCachedCms()
+  const baseSeed = localCached ? localCached : DEFAULT_CMS_DATA
+
   const endpoints = [API_BASE, DIRECT_API]
   for (const ep of endpoints) {
     try {
@@ -57,26 +77,31 @@ export async function fetchCms() {
       if (!res.ok) continue
       const json = await res.json()
       if (json.success && json.data) {
-        const merged = deepMerge(DEFAULT_CMS_DATA, json.data)
+        const serverData = deepMerge(DEFAULT_CMS_DATA, json.data)
+        const merged = localCached ? deepMerge(serverData, localCached) : serverData
+        cacheCmsLocally(merged)
         return { success: true, data: merged, source: json.source }
       }
-    } catch {}
+    } catch { }
   }
 
-  return { success: false, data: DEFAULT_CMS_DATA }
+  return { success: !!localCached, data: baseSeed }
 }
 
 export async function saveCms(data, passcode = 'uandwe2026') {
-  // 1. Broadcast to open preview tabs for instant zero-latency UI update
+  // 1. Immediately cache locally so refresh NEVER loses changes
+  cacheCmsLocally(data)
+
+  // 2. Broadcast to open preview tabs for instant zero-latency UI update
   if (typeof window !== 'undefined' && typeof BroadcastChannel !== 'undefined') {
     try {
       const ch = new BroadcastChannel(BROADCAST_CHANNEL)
       ch.postMessage({ type: 'CMS_SYNC', data })
       ch.close()
-    } catch {}
+    } catch { }
   }
 
-  // 2. Persist directly to backend database (try proxy and direct)
+  // 3. Persist directly to backend database (try proxy and direct)
   const endpoints = [API_BASE, DIRECT_API]
   let lastError = null
 
