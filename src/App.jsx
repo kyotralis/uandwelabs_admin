@@ -1494,12 +1494,20 @@ export default function App() {
 
       // Route change notification from iframe
       if (e.data?.type === 'ROUTE_CHANGE' && e.data.path) {
-        setActivePath(e.data.path)
+        const cleanPath = e.data.path.split('#')[0] || '/'
+        setActivePath(cleanPath)
       }
 
-      // Section change notification from iframe
-      if (e.data?.type === 'SECTION_CHANGE' && e.data.path) {
-        setActivePath(e.data.path)
+      // Section scroll notification from iframe (track in session without forcing iframe reloads)
+      if (e.data?.type === 'SECTION_CHANGE' || e.data?.type === 'SECTION_SCROLL') {
+        try {
+          if (e.data.section) {
+            sessionStorage.setItem('uandwe_active_section', e.data.section)
+          }
+          if (e.data.scrollY !== undefined) {
+            sessionStorage.setItem('uandwe_scroll_y', String(e.data.scrollY))
+          }
+        } catch {}
       }
     }
 
@@ -1519,6 +1527,13 @@ export default function App() {
     const separator = path.includes('?') ? '&' : '?'
     return `${base}${path}${separator}admin=true`
   }
+
+  // Preserve stable iframe URL so React renders do not cause iframe reloads/blinking
+  const [initialIframeUrl] = useState(() => {
+    const base = (frontendBaseUrl || '').replace(/\/$/, '')
+    const separator = activePath.includes('?') ? '&' : '?'
+    return `${base}${activePath}${separator}admin=true`
+  })
 
   const updateFrontendUrl = (newUrl) => {
     if (!newUrl) return
@@ -1749,7 +1764,7 @@ export default function App() {
       <div className="w-full h-full bg-white overflow-hidden relative">
         <iframe
           ref={iframeRef}
-          src={getPreviewUrl()}
+          src={initialIframeUrl}
           className="w-full h-full border-0 bg-white"
           title="UandWe Labs Website Preview"
           onLoad={handleIframeLoad}
