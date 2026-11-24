@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Layers, Image, Shield, Lock, Sparkles, Cpu } from 'lucide-react'
+import { Layers, Image as ImageIcon, Shield, Lock, Sparkles, Cpu } from 'lucide-react'
 
 export default function AuraEditor({ cms, setCms, onOpenMediaPicker }) {
   const aura = cms.aura || {}
@@ -119,7 +119,7 @@ export default function AuraEditor({ cms, setCms, onOpenMediaPicker }) {
       <div className="bg-neutral-900 border border-neutral-800 rounded-3xl p-6 sm:p-8 space-y-6">
         <div className="pb-4 border-b border-neutral-800">
           <h2 className="text-lg font-bold text-white flex items-center gap-2">
-            <Image className="w-5 h-5 text-neutral-400" />
+            <ImageIcon className="w-5 h-5 text-neutral-400" />
             <span>Hardware Showcase Gallery ({gallery.length})</span>
           </h2>
           <p className="text-xs text-neutral-400">Ladybug sensor node, multilane LPR, and perimeter mesh hardware cards.</p>
