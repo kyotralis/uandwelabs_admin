@@ -4,7 +4,6 @@ import {
   Lock,
   X,
   Plus,
-  
   Trash2,
   Upload,
   Image as ImageIcon,
