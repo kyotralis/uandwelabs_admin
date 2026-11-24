@@ -14,7 +14,7 @@ import {
   LogOut,
   RefreshCw,
 } from 'lucide-react'
-import { fetchCms, saveCms, uploadMedia, DEFAULT_CMS_DATA } from './services/api'
+import { fetchCms, saveCms, uploadMedia, DEFAULT_CMS_DATA, getCachedCms } from './services/api'
 import { ToastContainer, showToast } from './components/Toast'
 
 // ==========================================
@@ -802,7 +802,7 @@ function SectionEditorModal({ isOpen, onClose, section, field, label, cms, onUpd
         if (section === 'settings' && field === 'header') {
           const existingHeader = pageData.header || defaultPageData.header || {}
           rawData = {
-            logo: existingHeader.logo || pageData.logo || 'https://res.cloudinary.com/fukpn05e/image/upload/v1795433842/uandwelabs/cms/uandwe_logo_1795433840415.png',
+            logo: existingHeader.logo || pageData.logo || 'https://res.cloudinary.com/fukpn05e/image/upload/v1795505972/uandwelabs/cms/logo_1795505971242.png',
             companyName: existingHeader.companyName || pageData.companyName || 'UANDWE Labs',
             regionText: existingHeader.regionText || 'India',
             signInText: existingHeader.signInText || 'Sign In',
@@ -816,7 +816,7 @@ function SectionEditorModal({ isOpen, onClose, section, field, label, cms, onUpd
           const existingSettings = pageData || defaultPageData || {}
           const existingFooter = existingSettings.footer || {}
           rawData = {
-            logo: existingFooter.logo || existingSettings.logo || 'https://res.cloudinary.com/fukpn05e/image/upload/v1795433842/uandwelabs/cms/uandwe_logo_1795433840415.png',
+            logo: existingFooter.logo || existingSettings.logo || 'https://res.cloudinary.com/fukpn05e/image/upload/v1795505972/uandwelabs/cms/logo_1795505971242.png',
             companyName: existingFooter.companyName || existingSettings.companyName || 'UANDWE Labs',
             footerTagline: existingFooter.footerTagline || existingSettings.footerTagline || '',
             copyrightText: existingFooter.copyrightText || existingSettings.copyrightText || '© 2026 uandwelabs. All rights reserved.',
@@ -1327,7 +1327,7 @@ function SectionEditorModal({ isOpen, onClose, section, field, label, cms, onUpd
 // MAIN ADMIN APP
 // ==========================================
 export default function App() {
-  const [cms, setCms] = useState(DEFAULT_CMS_DATA)
+  const [cms, setCms] = useState(() => getCachedCms() || DEFAULT_CMS_DATA)
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
     return sessionStorage.getItem('uandwe_admin_auth') === 'true'
   })
@@ -1595,8 +1595,14 @@ export default function App() {
 
       // Synchronize settings.header with settings.companyName and settings.logo
       if (section === 'settings' && field === 'header') {
-        if (data?.companyName) pageObj.companyName = data.companyName
-        if (data?.logo) pageObj.logo = data.logo
+        if (data?.companyName) {
+          pageObj.companyName = data.companyName
+          if (pageObj.footer) pageObj.footer.companyName = data.companyName
+        }
+        if (data?.logo) {
+          pageObj.logo = data.logo
+          if (pageObj.footer) pageObj.footer.logo = data.logo
+        }
       }
       // Synchronize settings.footer with settings.companyName, settings.logo, settings.footerTagline, etc.
       if (section === 'settings' && field === 'footer') {
