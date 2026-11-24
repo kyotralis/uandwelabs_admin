@@ -1328,6 +1328,10 @@ function SectionEditorModal({ isOpen, onClose, section, field, label, cms, onUpd
 // ==========================================
 export default function App() {
   const [cms, setCms] = useState(() => getCachedCms() || DEFAULT_CMS_DATA)
+  const cmsRef = useRef(cms)
+  useEffect(() => {
+    cmsRef.current = cms
+  }, [cms])
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
     return sessionStorage.getItem('uandwe_admin_auth') === 'true'
   })
@@ -1482,6 +1486,12 @@ export default function App() {
       // Admin check: iframe asking if it's in admin mode
       if (e.data?.type === 'ADMIN_CHECK') {
         iframeRef.current?.contentWindow?.postMessage({ type: 'ADMIN_ACTIVATE' }, '*')
+        if (cmsRef.current) {
+          iframeRef.current?.contentWindow?.postMessage({
+            type: 'CMS_UPDATE',
+            cms: cmsRef.current,
+          }, '*')
+        }
       }
 
       // Edit section request from iframe
@@ -1519,6 +1529,12 @@ export default function App() {
   const handleIframeLoad = () => {
     setTimeout(() => {
       iframeRef.current?.contentWindow?.postMessage({ type: 'ADMIN_ACTIVATE' }, '*')
+      if (cmsRef.current) {
+        iframeRef.current?.contentWindow?.postMessage({
+          type: 'CMS_UPDATE',
+          cms: cmsRef.current,
+        }, '*')
+      }
     }, 500)
   }
 
@@ -1685,8 +1701,8 @@ export default function App() {
         setLastSaved(new Date().toLocaleTimeString())
         showToast('Changes saved and live!', 'success')
 
-        // Tell iframe to re-sync CMS data
-        iframeRef.current?.contentWindow?.postMessage({ type: 'CMS_REFRESH' }, '*')
+        // Send fresh CMS data to iframe
+        iframeRef.current?.contentWindow?.postMessage({ type: 'CMS_UPDATE', cms: updated }, '*')
       } else {
         throw new Error(res?.error || 'Save failed')
       }
