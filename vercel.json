@@ -1,23 +1,29 @@
-{
-  "headers": [
-    {
-      "source": "/(.*)",
-      "headers": [
-        {
-          "key": "Cross-Origin-Opener-Policy",
-          "value": "same-origin-allow-popups"
-        }
-      ]
-    }
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+import tailwindcss from '@tailwindcss/vite'
+import { fileURLToPath, URL } from 'node:url'
+
+export default defineConfig({
+  plugins: [
+    tailwindcss(),
+    react(),
   ],
-  "rewrites": [
-    {
-      "source": "/api/:path*",
-      "destination": "https://uandwelabs-backend.vercel.app/api/:path*"
+  resolve: {
+    alias: {
+      '@': fileURLToPath(new URL('./src', import.meta.url)),
     },
-    {
-      "source": "/(.*)",
-      "destination": "/index.html"
-    }
-  ]
-}
+  },
+  server: {
+    port: 5175,
+    strictPort: true,
+    proxy: {
+      '/api': {
+        target: 'http://localhost:5001',
+        changeOrigin: true,
+      },
+    },
+  },
+  build: {
+    chunkSizeWarningLimit: 600,
+  },
+})
