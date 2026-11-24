@@ -18,7 +18,7 @@ export default defineConfig({
     strictPort: true,
     proxy: {
       '/api': {
-        target: 'http://localhost:5001',
+        target: 'https://uandwelabs-backend.vercel.app',
         changeOrigin: true,
       },
     },
