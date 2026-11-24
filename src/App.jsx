@@ -1,13 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import {
   Save,
-  RotateCcw,
-  Eye,
-  EyeOff,
-  CheckCircle2,
-  AlertCircle,
-  Lock,
-  Unlock,
+
   X,
   Plus,
   Trash2,
@@ -15,11 +9,11 @@ import {
   Image as ImageIcon,
   ChevronUp,
   ChevronDown,
-  Monitor,
-  Smartphone,
+
   ExternalLink,
   Copy,
   LogOut,
+  RefreshCw,
 } from 'lucide-react'
 import { fetchCms, saveCms, uploadMedia, DEFAULT_CMS_DATA } from './services/api'
 import { ToastContainer, showToast } from './components/Toast'
@@ -567,7 +561,7 @@ const SECTION_FIELDS = {
 // ==========================================
 // IMAGE FIELD COMPONENT
 // ==========================================
-function ImageField({ value, onChange, label, frontendPort = '5174', onApplyToAll = null }) {
+function ImageField({ value, onChange, label, frontendBaseUrl = '', onApplyToAll = null }) {
   const fileRef = useRef(null)
   const [uploading, setUploading] = useState(false)
 
@@ -588,7 +582,7 @@ function ImageField({ value, onChange, label, frontendPort = '5174', onApplyToAl
   }
 
   const imageSrc = value
-    ? (value.startsWith('/') ? `http://localhost:${frontendPort}${value}` : value)
+    ? (value.startsWith('/') ? `${frontendBaseUrl}${value}` : value)
     : ''
 
   return (
@@ -745,7 +739,7 @@ const SECTION_COMPANIONS = {
 // ==========================================
 // SECTION EDITOR MODAL
 // ==========================================
-function SectionEditorModal({ isOpen, onClose, section, field, label, cms, onUpdate, onSwitchSection, frontendPort = '5174' }) {
+function SectionEditorModal({ isOpen, onClose, section, field, label, cms, onUpdate, onSwitchSection, frontendBaseUrl = '' }) {
   const defKey = `${section}.${field}`
   const companion = SECTION_COMPANIONS[defKey]
   let def = SECTION_FIELDS[defKey] ||
@@ -1038,7 +1032,7 @@ function SectionEditorModal({ isOpen, onClose, section, field, label, cms, onUpd
           value={value}
           onChange={onChange}
           label={fieldDef.label}
-          frontendPort={frontendPort}
+          frontendBaseUrl={frontendBaseUrl}
           onApplyToAll={onApplyToAll}
         />
       )
@@ -1333,14 +1327,19 @@ export default function App() {
   const [isSaving, setIsSaving] = useState(false)
   const [lastSaved, setLastSaved] = useState(null)
   const [viewMode, setViewMode] = useState('desktop') // desktop | mobile
-  const [frontendPort, setFrontendPort] = useState(() => {
-    const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null
-    const p = params?.get('port')
-    if (p) return p
-    const saved = typeof window !== 'undefined' ? localStorage.getItem('uandwe_frontend_port') : null
-    // Default to 5174 since user's frontend is running on 5174!
-    if (!saved || saved === '5173') return '5174'
-    return saved
+  const [frontendBaseUrl, setFrontendBaseUrl] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search)
+      const site = params.get('site') || params.get('preview')
+      if (site) return site.replace(/\/$/, '')
+      const saved = localStorage.getItem('uandwe_frontend_url')
+      if (saved) return saved.replace(/\/$/, '')
+      if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        const port = params.get('port') || localStorage.getItem('uandwe_frontend_port') || '5174'
+        return `http://localhost:${port}`
+      }
+    }
+    return import.meta.env.VITE_FRONTEND_URL || 'https://uandwelabs.vercel.app'
   })
   const [activePath, setActivePath] = useState(() => {
     const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null
@@ -1421,20 +1420,37 @@ export default function App() {
     }, 500)
   }
 
+  const getPreviewUrl = (path = activePath) => {
+    const base = (frontendBaseUrl || '').replace(/\/$/, '')
+    const separator = path.includes('?') ? '&' : '?'
+    return `${base}${path}${separator}admin=true`
+  }
+
+  const updateFrontendUrl = (newUrl) => {
+    if (!newUrl) return
+    const cleanUrl = newUrl.trim().replace(/\/$/, '')
+    setFrontendBaseUrl(cleanUrl)
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('uandwe_frontend_url', cleanUrl)
+    }
+    if (iframeRef.current) {
+      const separator = activePath.includes('?') ? '&' : '?'
+      iframeRef.current.src = `${cleanUrl}${activePath}${separator}admin=true&t=${Date.now()}`
+    }
+    showToast(`Preview website updated to ${cleanUrl}`, 'info')
+  }
+
   // Switch port between 5174 and 5173
   const switchPort = (newPort) => {
-    setFrontendPort(newPort)
-    localStorage.setItem('uandwe_frontend_port', newPort)
-    if (iframeRef.current) {
-      iframeRef.current.src = `http://localhost:${newPort}${activePath}${activePath.includes('?') ? '&' : '?'}admin=true`
-    }
-    showToast(`Switched preview to Port ${newPort}`, 'info')
+    updateFrontendUrl(`http://localhost:${newPort}`)
   }
 
   // Reload iframe
   const reloadIframe = () => {
     if (iframeRef.current) {
-      iframeRef.current.src = `http://localhost:${frontendPort}${activePath}${activePath.includes('?') ? '&' : '?'}admin=true&t=${Date.now()}`
+      const base = (frontendBaseUrl || '').replace(/\/$/, '')
+      const separator = activePath.includes('?') ? '&' : '?'
+      iframeRef.current.src = `${base}${activePath}${separator}admin=true&t=${Date.now()}`
     }
     showToast('Reloading preview...', 'info')
   }
@@ -1443,7 +1459,9 @@ export default function App() {
   const navigateIframe = (path) => {
     setActivePath(path)
     if (iframeRef.current) {
-      iframeRef.current.src = `http://localhost:${frontendPort}${path}?admin=true`
+      const base = (frontendBaseUrl || '').replace(/\/$/, '')
+      const separator = path.includes('?') ? '&' : '?'
+      iframeRef.current.src = `${base}${path}${separator}admin=true`
     }
   }
 
@@ -1624,11 +1642,44 @@ export default function App() {
       <div className="w-full h-full bg-white overflow-hidden relative">
         <iframe
           ref={iframeRef}
-          src={`http://localhost:${frontendPort}${activePath}${activePath.includes('?') ? '&' : '?'}admin=true`}
+          src={getPreviewUrl()}
           className="w-full h-full border-0 bg-white"
           title="UandWe Labs Website Preview"
           onLoad={handleIframeLoad}
         />
+      </div>
+
+      {/* Floating Website Preview URL Controller */}
+      <div className="fixed bottom-4 left-4 z-40 flex items-center gap-2 p-1.5 px-3 rounded-full bg-neutral-900/90 hover:bg-neutral-900 text-neutral-300 border border-neutral-700/80 shadow-2xl backdrop-blur-md text-xs">
+        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+        <span className="text-neutral-400 font-mono hidden md:inline">Website:</span>
+        <span className="font-mono text-neutral-200 max-w-[200px] truncate" title={frontendBaseUrl}>
+          {frontendBaseUrl}
+        </span>
+        <button
+          type="button"
+          onClick={() => {
+            const next = window.prompt(
+              'Enter Live Website URL (e.g. https://uandwelabs.vercel.app or http://localhost:5174):',
+              frontendBaseUrl
+            )
+            if (next && next.trim()) {
+              updateFrontendUrl(next)
+            }
+          }}
+          className="ml-1 p-1 hover:text-white text-neutral-400 cursor-pointer rounded hover:bg-neutral-800 transition-colors"
+          title="Change preview website URL"
+        >
+          <ExternalLink size={12} />
+        </button>
+        <button
+          type="button"
+          onClick={reloadIframe}
+          className="p-1 hover:text-white text-neutral-400 cursor-pointer rounded hover:bg-neutral-800 transition-colors"
+          title="Reload preview"
+        >
+          <RefreshCw size={12} />
+        </button>
       </div>
 
       {/* Discreet Exit Admin Button */}
@@ -1656,7 +1707,7 @@ export default function App() {
           setEditField(fld)
           setEditLabel(lbl)
         }}
-        frontendPort={frontendPort}
+        frontendBaseUrl={frontendBaseUrl}
       />
 
       <ToastContainer />
