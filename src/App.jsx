@@ -1352,17 +1352,96 @@ export default function App() {
     return import.meta.env.VITE_FRONTEND_URL || 'https://uandwelabs.vercel.app'
   })
   const [activePath, setActivePath] = useState(() => {
-    const params = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null
-    const page = params?.get('page')
+    if (typeof window === 'undefined') return '/'
+    const params = new URLSearchParams(window.location.search)
+    const page = params.get('page')
     if (page) return page.startsWith('/') ? page : `/${page}`
+    try {
+      const saved = sessionStorage.getItem('uandwe_admin_active_path')
+      if (saved) return saved
+    } catch {}
     return '/'
   })
 
-  // Section editor modal state
-  const [editorOpen, setEditorOpen] = useState(false)
-  const [editSection, setEditSection] = useState(null)
-  const [editField, setEditField] = useState(null)
-  const [editLabel, setEditLabel] = useState('')
+  // Section editor modal state with persistence across browser refresh
+  const [editorOpen, setEditorOpen] = useState(() => {
+    if (typeof window === 'undefined') return false
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('section') && params.get('field')) return true
+    try {
+      return sessionStorage.getItem('uandwe_admin_editor_open') === 'true'
+    } catch {}
+    return false
+  })
+  const [editSection, setEditSection] = useState(() => {
+    if (typeof window === 'undefined') return null
+    const params = new URLSearchParams(window.location.search)
+    const sec = params.get('section')
+    if (sec) return sec
+    try {
+      return sessionStorage.getItem('uandwe_admin_edit_section') || null
+    } catch {}
+    return null
+  })
+  const [editField, setEditField] = useState(() => {
+    if (typeof window === 'undefined') return null
+    const params = new URLSearchParams(window.location.search)
+    const fld = params.get('field')
+    if (fld) return fld
+    try {
+      return sessionStorage.getItem('uandwe_admin_edit_field') || null
+    } catch {}
+    return null
+  })
+  const [editLabel, setEditLabel] = useState(() => {
+    if (typeof window === 'undefined') return ''
+    const params = new URLSearchParams(window.location.search)
+    const lbl = params.get('label')
+    if (lbl) return decodeURIComponent(lbl)
+    try {
+      return sessionStorage.getItem('uandwe_admin_edit_label') || ''
+    } catch {}
+    return ''
+  })
+
+  // Persist activePath in URL and sessionStorage across browser refresh
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    try {
+      sessionStorage.setItem('uandwe_admin_active_path', activePath)
+      const url = new URL(window.location.href)
+      url.searchParams.set('page', activePath)
+      window.history.replaceState(null, '', url.toString())
+    } catch {}
+  }, [activePath])
+
+  // Persist modal state in URL and sessionStorage across browser refresh
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    try {
+      if (editorOpen && editSection && editField) {
+        sessionStorage.setItem('uandwe_admin_editor_open', 'true')
+        sessionStorage.setItem('uandwe_admin_edit_section', editSection)
+        sessionStorage.setItem('uandwe_admin_edit_field', editField)
+        sessionStorage.setItem('uandwe_admin_edit_label', editLabel || '')
+        const url = new URL(window.location.href)
+        url.searchParams.set('section', editSection)
+        url.searchParams.set('field', editField)
+        if (editLabel) url.searchParams.set('label', editLabel)
+        window.history.replaceState(null, '', url.toString())
+      } else {
+        sessionStorage.removeItem('uandwe_admin_editor_open')
+        sessionStorage.removeItem('uandwe_admin_edit_section')
+        sessionStorage.removeItem('uandwe_admin_edit_field')
+        sessionStorage.removeItem('uandwe_admin_edit_label')
+        const url = new URL(window.location.href)
+        url.searchParams.delete('section')
+        url.searchParams.delete('field')
+        url.searchParams.delete('label')
+        window.history.replaceState(null, '', url.toString())
+      }
+    } catch {}
+  }, [editorOpen, editSection, editField, editLabel])
 
   const iframeRef = useRef(null)
 
@@ -1415,6 +1494,11 @@ export default function App() {
 
       // Route change notification from iframe
       if (e.data?.type === 'ROUTE_CHANGE' && e.data.path) {
+        setActivePath(e.data.path)
+      }
+
+      // Section change notification from iframe
+      if (e.data?.type === 'SECTION_CHANGE' && e.data.path) {
         setActivePath(e.data.path)
       }
     }
