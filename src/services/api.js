@@ -3,7 +3,7 @@ import { DEFAULT_CMS_DATA } from '../data/defaultCms'
 const BROADCAST_CHANNEL = 'uandwe_cms_sync_channel'
 
 const API_BASE = '/api/cms'
-const DIRECT_API = 'http://localhost:5001/api/cms'
+const DIRECT_API = 'https://uandwelabs-backend.vercel.app/api/cms'
 
 // Clean up any legacy localStorage cache
 if (typeof window !== 'undefined') {
