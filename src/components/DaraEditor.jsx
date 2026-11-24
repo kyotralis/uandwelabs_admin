@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Layers, Volume2, Shield, Heart, Sparkles, Image } from 'lucide-react'
+import { Layers, Volume2, Shield, Heart, Sparkles, Image as ImageIcon } from 'lucide-react'
 
 export default function DaraEditor({ cms, setCms, onOpenMediaPicker }) {
   const dara = cms.dara || {}
@@ -172,7 +172,7 @@ export default function DaraEditor({ cms, setCms, onOpenMediaPicker }) {
       <div className="bg-neutral-900 border border-neutral-800 rounded-3xl p-6 sm:p-8 space-y-6">
         <div className="pb-4 border-b border-neutral-800">
           <h2 className="text-lg font-bold text-white flex items-center gap-2">
-            <Image className="w-5 h-5 text-neutral-400" />
+            <ImageIcon className="w-5 h-5 text-neutral-400" />
             <span>Spatial Dynamics Gallery ({gallery.length})</span>
           </h2>
           <p className="text-xs text-neutral-400">Hardware feature cards with interactive photo showcase.</p>
