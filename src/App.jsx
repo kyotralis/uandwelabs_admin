@@ -37,10 +37,10 @@ const SECTION_FIELDS = {
   'home.beliefs': {
     type: 'object',
     objectFields: [
-      { key: 'badge', label: 'Badge', type: 'text' },
-      { key: 'title', label: 'Section Title', type: 'text' },
-      { key: 'subtitle', label: 'Subtitle', type: 'text' },
-      { key: 'intro', label: 'Introduction', type: 'textarea' },
+      { key: 'title1', label: 'Headline Line 1 (e.g. WHAT WE)', type: 'text' },
+      { key: 'title2', label: 'Headline Line 2 (e.g. BELIEVE IN)', type: 'text' },
+      { key: 'subtitle', label: 'Sub-headline (e.g. CORE ENGINEERING PRINCIPLES)', type: 'text' },
+      { key: 'intro', label: 'Introductory Statement', type: 'textarea' },
     ],
     arrayKey: 'items',
     itemFields: [
@@ -499,6 +499,7 @@ const SECTION_FIELDS = {
       { key: 'content', label: 'Article Content (paragraphs)', type: 'textarea' },
       { key: 'bulletPoints', label: 'Sub-clauses / Bullet Points (one per line)', type: 'textarea' },
       { key: 'contactEmail', label: 'Legal Contact Email (optional)', type: 'text' },
+      { key: 'securityEmail', label: 'Security & Incident Desk Email (optional)', type: 'text' },
     ],
   },
 
@@ -550,7 +551,7 @@ const SECTION_FIELDS = {
   'termsOfService.contact': {
     type: 'object',
     objectFields: [
-      { key: 'label', label: 'Compliance Desk Box Heading', type: 'text' },
+      { key: 'label', label: 'Compliance Desk Heading', type: 'text' },
       { key: 'deskDescription', label: 'Desk Description', type: 'textarea' },
       { key: 'contactEmail', label: 'Compliance Desk Email', type: 'text' },
     ],
@@ -801,7 +802,7 @@ function SectionEditorModal({ isOpen, onClose, section, field, label, cms, onUpd
         if (section === 'settings' && field === 'header') {
           const existingHeader = pageData.header || defaultPageData.header || {}
           rawData = {
-            logo: existingHeader.logo || pageData.logo || '/assets/logo.webp',
+            logo: existingHeader.logo || pageData.logo || 'https://res.cloudinary.com/fukpn05e/image/upload/v1795433842/uandwelabs/cms/uandwe_logo_1795433840415.png',
             companyName: existingHeader.companyName || pageData.companyName || 'UANDWE Labs',
             regionText: existingHeader.regionText || 'India',
             signInText: existingHeader.signInText || 'Sign In',
@@ -815,7 +816,7 @@ function SectionEditorModal({ isOpen, onClose, section, field, label, cms, onUpd
           const existingSettings = pageData || defaultPageData || {}
           const existingFooter = existingSettings.footer || {}
           rawData = {
-            logo: existingFooter.logo || existingSettings.logo || '/assets/logo.webp',
+            logo: existingFooter.logo || existingSettings.logo || 'https://res.cloudinary.com/fukpn05e/image/upload/v1795433842/uandwelabs/cms/uandwe_logo_1795433840415.png',
             companyName: existingFooter.companyName || existingSettings.companyName || 'UANDWE Labs',
             footerTagline: existingFooter.footerTagline || existingSettings.footerTagline || '',
             copyrightText: existingFooter.copyrightText || existingSettings.copyrightText || '© 2026 uandwelabs. All rights reserved.',
@@ -826,6 +827,16 @@ function SectionEditorModal({ isOpen, onClose, section, field, label, cms, onUpd
             contactPhone: existingFooter.contactPhone || existingSettings.contactPhone || '',
             officeAddress: existingFooter.officeAddress || existingSettings.officeAddress || '',
             ...existingFooter,
+          }
+        } else if (section === 'home' && field === 'beliefs') {
+          const existingBeliefs = pageData.beliefs || defaultPageData.beliefs || {}
+          rawData = {
+            title1: existingBeliefs.title1 || (existingBeliefs.title ? existingBeliefs.title.split(' ').slice(0, 2).join(' ') : 'What We'),
+            title2: existingBeliefs.title2 || (existingBeliefs.title ? existingBeliefs.title.split(' ').slice(2).join(' ') : 'Believe In'),
+            subtitle: existingBeliefs.subtitle || 'Core Engineering Principles',
+            intro: existingBeliefs.intro || existingBeliefs.desc || existingBeliefs.description || 'Great products begin with clear thinking, purposeful design, and an uncompromising commitment to getting the details right. At UANDWE Labs, we build technology that endures.',
+            items: existingBeliefs.items || defaultPageData.beliefs?.items || [],
+            ...existingBeliefs,
           }
         } else if (section === 'privacyPolicy' && field === 'contact') {
           const existingContact = pageData.contact || defaultPageData.contact || {}
@@ -1526,6 +1537,13 @@ export default function App() {
         if (data?.contactEmail) pageObj.contactEmail = data.contactEmail
       }
 
+      // Synchronize home.beliefs title with title1 and title2
+      if (section === 'home' && field === 'beliefs') {
+        if (data?.title1 || data?.title2) {
+          data.title = `${data.title1 || ''} ${data.title2 || ''}`.trim()
+        }
+      }
+
       // Synchronize Aura Board between home and aura
       if (section === 'home' && field === 'board') {
         if (!updated.aura) updated.aura = {}
@@ -1679,6 +1697,24 @@ export default function App() {
         >
           <RefreshCw size={12} />
         </button>
+
+        <div className="h-4 w-px bg-neutral-700 mx-1 hidden sm:block" />
+        <span className="text-neutral-400 font-mono hidden sm:inline">Page:</span>
+        <select
+          value={activePath}
+          onChange={(e) => navigateIframe(e.target.value)}
+          className="bg-neutral-800 border border-neutral-700 text-neutral-200 text-xs rounded-lg px-2 py-1 focus:outline-none focus:border-white font-mono cursor-pointer"
+        >
+          <option value="/">Home</option>
+          <option value="/ananda">Ananda</option>
+          <option value="/dara">Dara</option>
+          <option value="/aura">Aura</option>
+          <option value="/blogs">Blogs</option>
+          <option value="/about">About Us</option>
+          <option value="/careers">Careers</option>
+          <option value="/terms">Terms of Service</option>
+          <option value="/privacy">Privacy Policy</option>
+        </select>
       </div>
 
       {/* Discreet Exit Admin Button */}
