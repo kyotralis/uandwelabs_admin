@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import {
   Save,
-
+  Lock,
   X,
   Plus,
   Trash2,
@@ -9,7 +9,6 @@ import {
   Image as ImageIcon,
   ChevronUp,
   ChevronDown,
-
   ExternalLink,
   Copy,
   LogOut,
